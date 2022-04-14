@@ -1,5 +1,5 @@
 .*
-#### Except
+### Except
 !.nvmrc
 !.gitignore
 !.github
@@ -7,12 +7,24 @@
 !.prettierrc.json
 !.prettierignore
 
-#### Dependancies
-/node_modules
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
 
-#### Generated
+### VS Code ###
+.vscode/
+
+### Java
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Nodejs
+/node_modules
 /dist
 /coverage
-
-#### Misc
 npm-debug.log
