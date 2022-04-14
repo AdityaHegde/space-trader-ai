@@ -1,0 +1,18 @@
+.*
+#### Except
+!.nvmrc
+!.gitignore
+!.github
+!.eslintrc.js
+!.prettierrc.json
+!.prettierignore
+
+#### Dependancies
+/node_modules
+
+#### Generated
+/dist
+/coverage
+
+#### Misc
+npm-debug.log
