@@ -6,8 +6,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "outDir": "dist"
   },
-  "include": ["src"],
+  "include": ["src/main/typescript", "src/test/typescript"],
   "exclude": ["node_modules"]
 }

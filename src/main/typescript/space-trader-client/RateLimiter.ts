@@ -1,5 +1,7 @@
-import {asyncWait} from "./asyncWait";
+import {asyncWait} from "../utils/asyncWait";
+import {Injectable, Scope} from "@nestjs/common";
 
+@Injectable({scope: Scope.TRANSIENT})
 export class RateLimiter {
   // calls per second
   private rate: number;
@@ -9,13 +11,9 @@ export class RateLimiter {
 
   private retryAfter: number;
 
-  public constructor(rate = 1) {
-    this.setLimit(rate);
-  }
-
   public setLimit(rate: number) {
     this.rate = rate;
-    this.timeDiff = 1 / rate;
+    this.timeDiff = 1000 / rate;
   }
 
   public setRetryAfter(retryAfter: number) {
@@ -29,7 +27,7 @@ export class RateLimiter {
       await asyncWait(this.retryAfter);
       this.retryAfter = 0;
     } else if (curTime - this.previousTime < this.timeDiff) {
-      await asyncWait(curTime - this.previousTime - this.timeDiff);
+      await asyncWait(this.timeDiff - (curTime - this.previousTime));
     }
 
     this.previousTime = Date.now();
