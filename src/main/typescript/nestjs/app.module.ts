@@ -1,8 +1,9 @@
 import {Module} from "@nestjs/common";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {SpaceTraderApiModule} from "./space-trader-api/space-trader-api.module";
-import {ViewModule} from "./view/view.module";
 import {ConfigModule} from "@nestjs/config";
+import { ServeStaticModule } from "@nestjs/serve-static";
+import { join } from "path";
 
 @Module({
   imports: [
@@ -17,8 +18,10 @@ import {ConfigModule} from "@nestjs/config";
       synchronize: true,
       autoLoadEntities: true,
     }),
-    ViewModule,
     SpaceTraderApiModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), "/", "dist", "public"),
+    }),
   ],
 })
 export class AppModule {}

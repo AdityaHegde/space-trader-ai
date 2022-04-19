@@ -21,27 +21,32 @@ export class TradeService extends BaseService<TradeEntity> {
     super(httpClient, cacheManager, repository);
   }
 
-  public async loadMarketData(systemSymbol: string): Promise<TradeEntity[]> {
+  public async loadMarketData(systemSymbol: string, forceLoad = false): Promise<TradeEntity[]> {
     const cachedEntities = await this.cacheManager.get<Array<TradeEntity>>(systemSymbol);
-    if (cachedEntities) return cachedEntities;
+    if (!forceLoad && cachedEntities) return cachedEntities;
 
     const savedEntities = await this.repository.createQueryBuilder().select()
       .where("system = :system", {system: systemSymbol}).getMany();
-    if (savedEntities?.length) return savedEntities;
+    if (!forceLoad && savedEntities?.length) return savedEntities;
 
     const markets = await this.httpClient.get<Array<string>>(`/systems/${systemSymbol}/markets`);
     const tradeEntities = new Array<TradeEntity>();
+    const getEntity = (entityJson: TradeEntity, isExport: boolean) => {
+      return savedEntities.find(entity => {
+        return entity.export === isExport && entity.tradeSymbol === entityJson.tradeSymbol;
+      });
+    }
 
     for (const market of markets) {
       const marketDetails = await this.httpClient.get<ViewMarketResponse>(`/systems/${systemSymbol}/markets/${market}`);
       for (const exportJson of marketDetails.exports) {
-        const exportEntity = await this.fromJson(exportJson);
+        const exportEntity = await this.fromJson(exportJson, getEntity(exportJson, true));
         exportEntity.export = true;
         exportEntity.system = systemSymbol;
         tradeEntities.push(exportEntity);
       }
       for (const importJson of marketDetails.imports) {
-        const importEntity = await this.fromJson(importJson);
+        const importEntity = await this.fromJson(importJson, getEntity(importJson, false));
         importEntity.export = false;
         importEntity.system = systemSymbol;
         tradeEntities.push(importEntity);
@@ -49,6 +54,7 @@ export class TradeService extends BaseService<TradeEntity> {
     }
 
     await this.repository.save(tradeEntities);
+    await this.cacheManager.set(systemSymbol, tradeEntities);
 
     return tradeEntities;
   }
