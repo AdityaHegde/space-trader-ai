@@ -2,6 +2,7 @@ import axios, {AxiosResponse} from "axios";
 import {RateLimiter} from "./RateLimiter";
 import {Injectable} from "@nestjs/common";
 import {SpaceTraderConfig} from "../../config/SpaceTraderConfig";
+import { HttpLogger } from "@nestjs-server/logging/HttpLogger";
 
 type AxiosCall = (page?: number) => Promise<AxiosResponse>;
 export interface SpaceTradersResponse<Rec> {
@@ -18,6 +19,8 @@ export class SpaceTraderHttpService {
   private readonly urlBase: string;
   private readonly authToken: string;
 
+  private readonly logger = new HttpLogger();
+
   public constructor(
     private readonly config: SpaceTraderConfig,
     private readonly rateLimiter: RateLimiter,
@@ -28,13 +31,19 @@ export class SpaceTraderHttpService {
   }
 
   public async get<Rec>(url: string): Promise<Rec> {
-    return this.sendPaginatedRequest<Rec>((page?: number) =>
-      axios.get(this.getFullUrl(url, page), { headers: this.getHeaders(),  }));
+    return this.sendPaginatedRequest<Rec>((page?: number) => {
+      const fullUrl = this.getFullUrl(url, page);
+      this.logger.httpRequest("GET", fullUrl);
+      return axios.get(fullUrl, { headers: this.getHeaders() });
+    });
   }
 
   public async post<Rec>(url: string, data: Record<string, any> = {}): Promise<Rec> {
-    const resp = await this.sendRequest<Rec>(() =>
-      axios.post(this.getFullUrl(url), data, { headers: this.getHeaders() }));
+    const resp = await this.sendRequest<Rec>(() => {
+      const fullUrl = this.getFullUrl(url);
+      this.logger.httpRequest("POST", fullUrl, data);
+      return axios.post(fullUrl, data, { headers: this.getHeaders() });
+    });
     return resp.data;
   }
 
@@ -66,6 +75,7 @@ export class SpaceTraderHttpService {
     } catch (err) {
       resp = err.response;
     }
+    this.logger.httpResponse(resp);
     if (resp.status === 429) {
       this.rateLimiter.setRetryAfter(Number(resp.headers["retry-after"] ?? "5") * 1000);
       return this.sendRequest(axiosCall);

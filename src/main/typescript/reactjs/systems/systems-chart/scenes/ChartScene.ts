@@ -5,8 +5,10 @@ export class ChartScene<CObject extends ChartObject = ChartObject> {
   protected objects: Array<CObject>;
   public scene: Container;
   public selected: CObject;
+  private selectedIndex = 0;
 
   public selectedListener: (selected: CObject) => void;
+
 
   public constructor(
     protected readonly app: Application,
@@ -31,9 +33,19 @@ export class ChartScene<CObject extends ChartObject = ChartObject> {
     this.objects.forEach(object => object.render());
   }
 
-  public select(x: number, y: number) {
+  public select(x: number, y: number, scale: number) {
+    if (this.objects.length === 0) return;
     // TODO: build a binary search table
-    this.selected = this.objects.find(object => object.isWithin(x, y));
+    const startIdx = (this.selectedIndex + 1) % this.objects.length;
+    let i = startIdx;
+    do {
+      if (this.objects[i].isWithin(x, y, scale)) {
+        this.selected = this.objects[i];
+        this.selectedIndex = i;
+        break;
+      }
+      i = (i + 1) % this.objects.length;
+    } while (i !== startIdx);
     if (this.selectedListener) this.selectedListener(this.selected);
   }
 }

@@ -1,5 +1,5 @@
 import {Sprite, Texture, Text, TextStyle} from "pixi.js";
-import {COLLISION_RANGE, SCALE} from "../../SystemChartConstants";
+import {SCALE} from "../../SystemChartConstants";
 
 export class ChartObject {
   protected object: Sprite;
@@ -15,9 +15,9 @@ export class ChartObject {
     this.label.y = (this.y - 2.5) * SCALE;
   }
 
-  public isWithin(x: number, y: number) {
-    return this.x > x - COLLISION_RANGE && this.x < x + COLLISION_RANGE &&
-      this.y > y - COLLISION_RANGE && this.y < y + COLLISION_RANGE;
+  public isWithin(x: number, y: number, scale: number) {
+    return this.x > x - scale && this.x < x + scale &&
+      this.y > y - scale && this.y < y + scale;
   }
 
   protected createSprite(texture: Texture, label: string) {

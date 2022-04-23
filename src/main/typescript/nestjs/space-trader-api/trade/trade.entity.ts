@@ -6,7 +6,7 @@ export class TradeEntity extends BaseEntity {
   @PrimaryColumn()
   public waypointSymbol: string;
   @PrimaryColumn()
-  public system: string;
+  public systemSymbol: string;
   @PrimaryColumn()
   public tradeSymbol: string;
   @PrimaryColumn()

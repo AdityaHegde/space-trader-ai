@@ -1,5 +1,5 @@
 import {BaseService} from "../../BaseService";
-import {ShipEntity} from "./ship.entity";
+import { Cargo, ShipEntity } from "./ship.entity";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
 import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
 import {Cache} from "cache-manager";
@@ -29,12 +29,38 @@ export class ShipService extends BaseService<ShipEntity> {
       () => this.httpClient.get(`/my/ships/${shipSymbol}`),
     );
   }
+  public async updateExisting(ship: ShipEntity): Promise<ShipEntity> {
+    const newShip = await this.update(ship.symbol);
+    newShip.surveyCooldown = ship.surveyCooldown;
+    newShip.extractCooldown = ship.extractCooldown;
+    newShip.navigation = ship.navigation;
+    return newShip;
+  }
 
   public async getAll(): Promise<Array<ShipEntity>> {
     return this.getAllFromCacheOrFetch(
       "__all__", "symbol",
       () => this.httpClient.get<Array<ShipEntity>>("/my/ships"),
       this.repository.createQueryBuilder().select(),
+    );
+  }
+
+  public async updateAllShips(): Promise<Array<ShipEntity>> {
+    const ships = await this.httpClient.get<Array<ShipEntity>>("/my/ships");
+    const shipEntities = new Array<ShipEntity>();
+    for (const ship of ships) {
+      shipEntities.push(await this.getFromCacheOrFetch(
+        ship.symbol, async () => ship));
+    }
+    return shipEntities;
+  }
+
+  public async jettisonCargo(
+    shipSymbol: string, cargo: Cargo,
+  ): Promise<Cargo> {
+    return this.httpClient.post(
+      `/my/ships/${shipSymbol}/jettison`,
+      {tradeSymbol: cargo.tradeSymbol, units: cargo.units},
     );
   }
 
@@ -53,7 +79,7 @@ export class ShipService extends BaseService<ShipEntity> {
     ship.fuel = json.fuel;
     ship.cargo = json.cargo;
 
-    ship.location = json.location;
+    ship.location = json.location ?? "";
     ship.status = json.status;
     return ship;
   }

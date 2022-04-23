@@ -18,6 +18,12 @@ export class ShipController {
   public getShips(): Promise<Array<ShipEntity>> {
     return this.shipService.getAll();
   }
+  @Get("/:shipSymbol")
+  public getShip(
+    @Param("shipSymbol") shipSymbol: string,
+  ): Promise<ShipEntity> {
+    return this.shipService.update(shipSymbol);
+  }
 
   @Post("/:shipSymbol/navigate")
   public navigate(

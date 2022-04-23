@@ -3,6 +3,7 @@ export interface Navigation {
   departure: string;
   destination: string;
   durationRemaining: number;
+  departedAt: string | null;
   arrivedAt: string | null;
 }
 

@@ -30,6 +30,4 @@ export class WaypointEntity extends BaseEntity {
   public charted: boolean;
   @Column("text", {nullable: true})
   public chartedBy!: string | null;
-  // @Column("boolean", {default: false})
-  // public hasMarket: boolean;
 }

@@ -11,16 +11,18 @@ export abstract class BaseService<Entity extends BaseEntity> {
   ) {}
 
   protected async getFromCacheOrFetch(
-    primaryKey: string, remoteFetcher: () => Promise<Entity>
+    primaryKey: string,
+    remoteFetcher: () => Promise<Entity>,
+    forceLoad = false,
   ): Promise<Entity> {
     const cachedEntity = await this.cacheManager.get<Entity>(primaryKey);
-    if (cachedEntity) return cachedEntity;
+    if (!forceLoad && cachedEntity) return cachedEntity;
 
     const savedEntity = await this.repository.findOne(primaryKey);
-    if (savedEntity) return savedEntity;
+    if (!forceLoad && savedEntity) return savedEntity;
 
     const resp = await remoteFetcher();
-    return this.newEntityFromJson(resp, primaryKey);
+    return this.loadEntityFromJson(resp, primaryKey, savedEntity);
   }
 
   protected async getAllFromCacheOrFetch(
@@ -29,7 +31,7 @@ export abstract class BaseService<Entity extends BaseEntity> {
     repositoryQuery?: SelectQueryBuilder<Entity>,
   ): Promise<Array<Entity>> {
     const cachedEntities = await this.cacheManager.get<Array<Entity>>(cacheKey);
-    if (cachedEntities) return cachedEntities;
+    if (cachedEntities?.length) return cachedEntities;
 
     if (repositoryQuery) {
       const savedEntities = await repositoryQuery.getMany();
@@ -38,8 +40,9 @@ export abstract class BaseService<Entity extends BaseEntity> {
 
     if (!remoteFetcher) return [];
     const resp = await remoteFetcher();
+    console.log(resp);
     const entities = await Promise.all(resp.map(async (entityJson) => {
-      return this.newEntityFromJson(entityJson, entityJson[primaryKeyField]);
+      return this.loadEntityFromJson(entityJson, entityJson[primaryKeyField]);
     }));
     return this.cacheManager.set<Array<Entity>>(cacheKey, entities);
   }
@@ -54,8 +57,8 @@ export abstract class BaseService<Entity extends BaseEntity> {
     return entity;
   }
 
-  protected async newEntityFromJson(entityJson: Entity, primaryKey: string) {
-    const entity = await this.fromJson(entityJson);
+  protected async loadEntityFromJson(entityJson: Entity, primaryKey: string, existingEntity?: Entity) {
+    const entity = await this.fromJson(entityJson, existingEntity);
     await this.repository.save(entity as any);
     return this.cacheManager.set<Entity>(primaryKey, entity);
   }

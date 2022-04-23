@@ -1,13 +1,13 @@
 import {BaseService} from "../../BaseService";
 import {SurveyEntity} from "./survey.entity";
-import {ShipEntity} from "../ships/ship.entity";
+import type { Cargo, ShipEntity } from "../ships/ship.entity";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
 import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
 import {Cache} from "cache-manager";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {Cooldown} from "../types/Cooldown";
-import {getTimeRemaining} from "../../../commons/dateUtils";
+import {getTimeRemaining} from "@commons/dateUtils";
 
 export interface SurveyResponse {
   cooldown: Cooldown;
@@ -16,10 +16,7 @@ export interface SurveyResponse {
 
 export interface Extraction {
   shipSymbol: string;
-  yield: {
-    tradeSymbol: string;
-    units: number;
-  };
+  yield: Cargo;
 }
 export interface ExtractResponse {
   cooldown: Cooldown;
@@ -37,12 +34,14 @@ export class ExtractionService extends BaseService<SurveyEntity> {
   }
 
   public async survey(ship: ShipEntity): Promise<Array<SurveyEntity>> {
-    if (!ship.surveyCooldown?.expiration || getTimeRemaining(ship.surveyCooldown.expiration) <= 0) {
+    if (ship.canSurvey()) {
       await this.repository.delete({});
+      await this.cacheManager.del(ship.location);
     }
     return this.getAllFromCacheOrFetch(
       ship.location, "signature",
       async () => {
+        if (!ship.canSurvey()) return [];
         const resp = await this.httpClient.post<SurveyResponse>(`/my/ships/${ship.symbol}/survey`);
         resp.surveys.forEach(survey => {
           survey.location = ship.location;
@@ -64,9 +63,20 @@ export class ExtractionService extends BaseService<SurveyEntity> {
     return resp.cooldown;
   }
 
-  public async extract(ship: ShipEntity, survey: SurveyEntity): Promise<Extraction> {
+  public async getSurveys(location: string): Promise<Array<SurveyEntity>> {
+    const cachedSurveys = await this.cacheManager.get<Array<SurveyEntity>>(location);
+    if (cachedSurveys) return cachedSurveys;
+
+    return this.repository.createQueryBuilder("surveys").select()
+      .where("surveys.location = :location", {location})
+      .getMany();
+  }
+
+  public async extract(ship: ShipEntity, survey?: SurveyEntity): Promise<Extraction> {
     const resp = await this.httpClient.post<ExtractResponse>(
-      `/my/ships/${ship.symbol}/extract`, {survey: JSON.parse(JSON.stringify(survey))});
+      `/my/ships/${ship.symbol}/extract`,
+      survey ? {survey: JSON.parse(JSON.stringify(survey))} : {},
+    );
     ship.extractCooldown = resp.cooldown;
     return resp.extraction;
   }

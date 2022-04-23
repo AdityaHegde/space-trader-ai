@@ -1,9 +1,11 @@
 import {Module} from "@nestjs/common";
 import {TypeOrmModule} from "@nestjs/typeorm";
-import {SpaceTraderApiModule} from "./space-trader-api/space-trader-api.module";
+import {SpaceTraderApiModule} from "@space-trader-api/space-trader-api.module";
 import {ConfigModule} from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { join } from "path";
+import { LoggerModule } from "@nestjs-server/logging/LoggerModule";
+import { AutomationModule } from "@nestjs-server/automation/automation.module";
 
 @Module({
   imports: [
@@ -18,7 +20,9 @@ import { join } from "path";
       synchronize: true,
       autoLoadEntities: true,
     }),
+    LoggerModule,
     SpaceTraderApiModule,
+    AutomationModule,
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), "/", "dist", "public"),
     }),

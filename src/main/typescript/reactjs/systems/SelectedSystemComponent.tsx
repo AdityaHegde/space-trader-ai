@@ -1,32 +1,27 @@
-import {SystemEntity} from "../../nestjs/space-trader-api/systems/system.entity";
-import {WaypointEntity} from "../../nestjs/space-trader-api/systems/waypoint.entity";
-import {PixiApp} from "./systems-chart/PixiApp";
-import {MARKETPLACE, SHIPYARD} from "../../commons/GameConstants";
+import { useSelector } from "react-redux";
+import { AppSceneState, appSceneStateSelector, pixiAppSelector, systemSelector } from "./systemsSlice";
 
-export interface SelectedSystemComponentProps {
-  system: SystemEntity;
-  waypoint: WaypointEntity;
-  app: PixiApp;
-}
+export const SelectedSystemComponent = () => {
+  const app = useSelector(pixiAppSelector);
+  const appSceneState = useSelector(appSceneStateSelector);
+  const system = useSelector(systemSelector);
+  if (!app || !system) return <div></div>;
 
-export const SelectedSystemComponent = ({ system, waypoint, app }: SelectedSystemComponentProps) => {
-  if (!system || !waypoint) return <div></div>
-  return <div className="text-center">
-    <h2 className="text-gray-500 dark:text-gray-200 text-md uppercase mb-4">
-      [{waypoint.charted ? "C" : "U"}] {waypoint.symbol} ({waypoint.type})
-    </h2>
-    <ul>
-      <li className="mb-4 hover:text-gray-800 dark:hover:text-white transition-colors duration-200">
-        {waypoint.features?.indexOf(MARKETPLACE) > -1 ? "Has Marketplace" : "No Marketplace"}
-      </li>
-      <li className="mb-4 hover:text-gray-800 dark:hover:text-white transition-colors duration-200">
-        {waypoint.features?.indexOf(SHIPYARD) > -1 ? "Has Shipyard" : "No Shipyard"}
-      </li>
-      <li className="mb-4 hover:text-gray-800 dark:hover:text-white transition-colors duration-200">
+  return <div className="shadow-lg w-full p-4 bg-gray-100 dark:bg-gray-600">
+    <p className="text-gray-800 dark:text-gray-100 text-lg font-medium mb-2">
+      {system.symbol} ({system.type})
+    </p>
+    <p className="text-gray-800 dark:text-gray-100 text-xs">
+      [{system.charted ? "Charted" : "Uncharted"}] {system.waypoints?.length ?? 0} Waypoint(s)
+    </p>
+    <p className="text-gray-800 dark:text-gray-100 text-xl font-medium">
+      {appSceneState === AppSceneState.System ?
         <a href="#" onClick={() => app.viewSector()}>
-          Back
-        </a>
-      </li>
-    </ul>
+          Exit
+        </a> :
+        <a href="#" onClick={() => app.viewSystem(system)}>
+          Enter
+        </a>}
+    </p>
   </div>
 }

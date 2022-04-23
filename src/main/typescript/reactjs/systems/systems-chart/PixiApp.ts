@@ -1,7 +1,7 @@
 import type {SystemEntity} from "../../../nestjs/space-trader-api/systems/system.entity";
 import {Application} from "pixi.js";
 import {SystemObject} from "./objects/SystemObject";
-import {CelestialObjectsTexture, CHART_HEIGHT, SCALE} from "../SystemChartConstants";
+import { CelestialObjectsTexture, CHART_HEIGHT, CHART_WIDTH, SCALE } from "../SystemChartConstants";
 import {TextureFactory} from "../TextureFactory";
 import {SectorChartScene} from "./scenes/SectorChartScene";
 import {SystemChartScene} from "./scenes/SystemChartScene";
@@ -26,7 +26,7 @@ export class PixiApp {
   public constructor(
     private readonly systems: Array<SystemEntity>,
   ) {
-    this.app = new Application({ height: CHART_HEIGHT });
+    this.app = new Application({ width: CHART_WIDTH, height: CHART_HEIGHT });
   }
 
   public async init(container: HTMLElement) {
@@ -74,6 +74,17 @@ export class PixiApp {
     if (this.sceneListener) this.sceneListener(this.currentScene);
   }
 
+  public zoomIn() {
+    if (this.app.stage.scale.x > 32) return;
+    this.app.stage.scale.x *= 2;
+    this.app.stage.scale.y *= 2;
+  }
+  public zoomOut() {
+    if (this.app.stage.scale.x < 0.25) return;
+    this.app.stage.scale.x /= 2;
+    this.app.stage.scale.y /= 2;
+  }
+
   private async loadAssets() {
     await new Promise<void>(resolve => {
       this.app.loader.add("celestialObjects", CelestialObjectsTexture);
@@ -102,13 +113,15 @@ export class PixiApp {
         this.app.stage.setTransform(
           this.app.stage.x + e.movementX,
           this.app.stage.y + e.movementY,
+          this.app.stage.scale.x,
+          this.app.stage.scale.y,
         );
       }
     });
     this.app.view.addEventListener("mouseup", (e) => {
-      const x = (e.offsetX - this.app.stage.x - 1) / SCALE;
-      const y = (e.offsetY - this.app.stage.y - 1) / SCALE;
-      this.currentScene.select(x, y);
+      const x = (e.offsetX - this.app.stage.x - 1) / SCALE / this.app.stage.scale.x;
+      const y = (e.offsetY - this.app.stage.y - 1) / SCALE / this.app.stage.scale.y;
+      this.currentScene.select(x, y, this.app.stage.scale.x);
     });
   }
 }

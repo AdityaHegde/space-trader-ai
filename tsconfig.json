@@ -16,7 +16,13 @@
     "strict": false,
     "jsx": "react-jsx",
 
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": "./",
+    "paths": {
+      "@nestjs-server/*": ["src/main/typescript/nestjs/*"],
+      "@space-trader-api/*": ["src/main/typescript/nestjs/space-trader-api/*"],
+      "@commons/*": ["src/main/typescript/commons/*"]
+    }
   },
   "include": [
     "src/main/typescript/nestjs",

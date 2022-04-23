@@ -6,6 +6,7 @@ import {Cache} from "cache-manager";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {SystemService} from "./system.service";
+import { WaypointType } from "@commons/GameConstants";
 
 @Injectable()
 export class WaypointService extends BaseService<WaypointEntity> {
@@ -54,6 +55,12 @@ export class WaypointService extends BaseService<WaypointEntity> {
       }
     }
     return waypoints;
+  }
+
+  public async findAsteroidInSystem(systemSymbol: string): Promise<WaypointEntity> {
+    return this.repository.findOne(
+      {where: {system: systemSymbol, type: WaypointType.ASTEROID_FIELD}},
+    );
   }
 
   protected async fromJson(json: WaypointEntity, waypoint = new WaypointEntity()): Promise<WaypointEntity> {

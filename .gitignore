@@ -28,3 +28,6 @@ target/
 /dist
 /coverage
 npm-debug.log
+
+### Generated
+/log

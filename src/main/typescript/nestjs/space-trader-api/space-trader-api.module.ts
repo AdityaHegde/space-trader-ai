@@ -3,11 +3,13 @@ import {SystemModule} from "./systems/system.module";
 import {ShipModule} from "./ships/ship.module";
 import {ExtractionModule} from "./extraction/extraction.module";
 import {RouterModule} from "@nestjs/core";
+import { TradeModule } from "./trade/trade.module";
 
 const ImportModules = [
   SystemModule,
   ShipModule,
-  ExtractionModule
+  ExtractionModule,
+  TradeModule,
 ];
 
 @Module({
