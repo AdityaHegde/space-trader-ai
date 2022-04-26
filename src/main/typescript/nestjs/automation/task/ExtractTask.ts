@@ -30,7 +30,7 @@ export class ExtractTask extends Task {
   }
 
   public isDone(ship: ShipEntity): boolean {
-    return ship.isFull();
+    return ship.isCargoFull();
   }
 
   public async acquireTarget(ship: ShipEntity, automation: AutomationEntity): Promise<void> {
@@ -42,14 +42,17 @@ export class ExtractTask extends Task {
     if (!automation.survey || hasExpired(automation.survey.expiration)) {
       automation.survey = await this.selectSurvey(ship);
     }
-    this.logger.shipCargoLog(ship, `${automation.survey.deposits.join(",")}`);
+    this.logger.shipCargoLog(ship, "Extracting with:" +
+      `${automation.survey ? automation.survey.deposits.join(",") : "No Survey"}`);
     const {system} = parseLocation(ship.location);
     const {importPrices} = await this.tradeService.getPricesInSystem(system);
 
     const extraction = await this.extractionService.extract(ship, automation.survey);
+    this.logger.shipLog(ship,
+      `Extracted Cargo=${extraction.yield.tradeSymbol}:${extraction.yield.units}`);
     if (!(extraction.yield.tradeSymbol in importPrices)) {
       // get rid of cargo that cannot be sold in system
-      await this.shipService.jettisonCargo(ship.symbol, extraction.yield);
+      await this.shipService.jettisonCargo(ship, extraction.yield);
     } else {
       ship.addCargo(extraction.yield);
     }
@@ -60,7 +63,7 @@ export class ExtractTask extends Task {
     const {importPrices} = await this.tradeService.getPricesInSystem(system);
 
     const surveys = (await this.extractionService.survey(ship))
-      .filter(survey => hasExpired(survey.expiration));
+      .filter(survey => !hasExpired(survey.expiration));
     const [survey] = getMaxInArray(surveys,
         survey => survey.getAverageValue(importPrices));
 

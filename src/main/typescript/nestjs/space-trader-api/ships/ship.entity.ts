@@ -1,7 +1,8 @@
 import {Column, Entity, PrimaryColumn} from "typeorm";
-import {Cooldown} from "../types/Cooldown";
 import { Navigation } from "../types/Navigation";
-import { hasExpired, hasTimeElapsed } from "@commons/dateUtils";
+import { getTimeRemaining, hasTimeElapsed } from "@commons/dateUtils";
+import { ShipCooldown } from "@space-trader-api/ships/ShipCooldown";
+import { ShipCargo } from "@space-trader-api/ships/ShipCargo";
 
 export interface Cargo {
   tradeSymbol: string;
@@ -53,29 +54,18 @@ export class ShipEntity {
   @Column()
   public status: string;
 
-  public surveyCooldown: Cooldown;
-  public extractCooldown: Cooldown;
+  public surveyCooldown = new ShipCooldown();
+  public extractCooldown = new ShipCooldown();
   public navigation: Navigation;
+  public jumpCooldown = new ShipCooldown();
+
+  public shipCargo = new ShipCargo(this);
 
   public canSurvey(): boolean {
-    if (this.surveyCooldown) {
-      if (hasExpired(this.surveyCooldown.expiration)) {
-        this.surveyCooldown = undefined;
-        return true;
-      }
-      return false;
-    }
-    return true;
+    return this.surveyCooldown.finishedCooldown();
   }
   public canExtract(): boolean {
-    if (this.extractCooldown) {
-      if (hasExpired(this.extractCooldown.expiration)) {
-        this.extractCooldown = undefined;
-        return true;
-      }
-      return false;
-    }
-    return true;
+    return this.extractCooldown.finishedCooldown();
   }
   public hasNavigated(): boolean {
     if (this.navigation) {
@@ -87,36 +77,20 @@ export class ShipEntity {
     }
     return true;
   }
+  public canJump(): boolean {
+    return this.jumpCooldown.finishedCooldown();
+  }
 
-  public getUsedCargo(): number {
-    return this.cargo.reduce(
-      (usedCargo, cargo) => usedCargo + cargo.units,
-      0,
-    );
+  public isCargoFull(): boolean {
+    return this.shipCargo.isFull();
   }
-  public isFull(): boolean {
-    return this.getUsedCargo() >= this.stats.cargoLimit;
-  }
-  public isEmpty(): boolean {
-    return this.getUsedCargo() === 0;
-  }
-  public getCargo(tradeSymbol: string): [number, Cargo] {
-    const idx = this.cargo.findIndex(cargo =>
-      cargo.tradeSymbol === tradeSymbol);
-    if (idx === -1) return [-1, undefined];
-    return [idx, this.cargo[idx]];
+  public isCargoEmpty(): boolean {
+    return this.shipCargo.isEmpty();
   }
   public addCargo(addedCargo: Cargo) {
-    const [,existing] = this.getCargo(addedCargo.tradeSymbol);
-    if (existing) existing.units += addedCargo.units;
-    else this.cargo.push(addedCargo);
+    this.shipCargo.addCargo(addedCargo);
   }
   public removeCargo(removedCargo: Cargo) {
-    const [idx, existing] = this.getCargo(removedCargo.tradeSymbol);
-    if (existing.units === removedCargo.units) {
-      this.cargo.splice(idx, 1);
-    } else {
-      existing.units -= removedCargo.units;
-    }
+    this.shipCargo.removeCargo(removedCargo);
   }
 }

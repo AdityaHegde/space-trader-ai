@@ -1,7 +1,6 @@
 import {BaseService} from "../../BaseService";
-import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
-import {Cache} from "cache-manager";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {SystemEntity} from "./system.entity";
@@ -10,14 +9,13 @@ import {SystemEntity} from "./system.entity";
 export class SystemService extends BaseService<SystemEntity> {
   public constructor(
     httpClient: SpaceTraderHttpService,
-    @Inject(CACHE_MANAGER) cacheManager: Cache,
     @InjectRepository(SystemEntity) repository: Repository<SystemEntity>
   ) {
-    super(httpClient, cacheManager, repository);
+    super(httpClient, repository);
   }
 
   public async get(systemSymbol: string): Promise<SystemEntity> {
-    return this.getFromCacheOrFetch(
+    return this.getFromDBOrFetch(
       systemSymbol,
       () => this.httpClient.get<SystemEntity>(`/systems/${systemSymbol}`),
     );
@@ -31,8 +29,7 @@ export class SystemService extends BaseService<SystemEntity> {
   }
 
   public async getAll(): Promise<Array<SystemEntity>> {
-    return this.getAllFromCacheOrFetch(
-      "__all__", "symbol",
+    return this.getAllFromDBOrFetch(
       () => this.httpClient.get<Array<SystemEntity>>("/systems"),
       this.repository.createQueryBuilder().select(),
     );

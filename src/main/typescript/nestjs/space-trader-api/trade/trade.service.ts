@@ -1,8 +1,7 @@
 import {BaseService} from "../../BaseService";
 import {TradeEntity} from "./trade.entity";
-import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
-import {Cache} from "cache-manager";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import { Cargo, ShipEntity } from "@space-trader-api/ships/ship.entity";
@@ -12,7 +11,6 @@ export interface ViewMarketResponse {
   imports: Array<TradeEntity>;
 }
 export type TradePrices = Record<string, number>;
-const TRADE_PRICES_CACHE_TTL = 30 * 60 * 1000;
 
 export interface TradeCargoResponse {
   waypointSymbol: string;
@@ -25,16 +23,12 @@ export interface TradeCargoResponse {
 export class TradeService extends BaseService<TradeEntity> {
   public constructor(
     httpClient: SpaceTraderHttpService,
-    @Inject(CACHE_MANAGER) cacheManager: Cache,
     @InjectRepository(TradeEntity) repository: Repository<TradeEntity>,
   ) {
-    super(httpClient, cacheManager, repository);
+    super(httpClient, repository);
   }
 
   public async getSystemMarketData(systemSymbol: string, forceLoad = false): Promise<TradeEntity[]> {
-    const cachedEntities = await this.cacheManager.get<Array<TradeEntity>>(systemSymbol);
-    if (!forceLoad && cachedEntities) return cachedEntities;
-
     const savedEntities = await this.repository.createQueryBuilder("tradeEntity").select()
       .where("tradeEntity.systemSymbol = :systemSymbol", {systemSymbol}).getMany();
     if (!forceLoad && savedEntities?.length) return savedEntities;
@@ -43,26 +37,18 @@ export class TradeService extends BaseService<TradeEntity> {
     const tradeEntities = new Array<TradeEntity>();
 
     for (const market of markets) {
-      tradeEntities.push(...await this.getWaypointMarketData(systemSymbol, market, forceLoad, false));
+      tradeEntities.push(...await this.getWaypointMarketData(systemSymbol, market, forceLoad));
     }
-
-    await this.cacheManager.set(
-      systemSymbol, tradeEntities,
-      {ttl: TRADE_PRICES_CACHE_TTL},
-    );
 
     return tradeEntities;
   }
 
   public async getWaypointMarketData(
     systemSymbol: string, waypointSymbol: string,
-    forceLoad = false, updateSystemCache = true,
+    forceLoad = false,
   ): Promise<Array<TradeEntity>> {
-    const cachedEntities = await this.cacheManager.get<Array<TradeEntity>>(waypointSymbol);
-    if (!forceLoad && cachedEntities) return cachedEntities;
-
-    const savedEntities = await this.repository.createQueryBuilder().select()
-      .where("waypointSymbol = :waypointSymbol", {waypointSymbol}).getMany();
+    const savedEntities = await this.repository.createQueryBuilder("tradeEntity").select()
+      .where("tradeEntity.waypointSymbol = :waypointSymbol", {waypointSymbol}).getMany();
     if (savedEntities?.length) {
       if (forceLoad) {
         await this.repository.delete({waypointSymbol});
@@ -93,21 +79,6 @@ export class TradeService extends BaseService<TradeEntity> {
     }
 
     await this.repository.save(tradeEntities);
-    await this.cacheManager.set(
-      waypointSymbol, tradeEntities,
-      {ttl: TRADE_PRICES_CACHE_TTL},
-    );
-    if (updateSystemCache) {
-      let systemTradeEntities = await this.cacheManager.get<Array<TradeEntity>>(systemSymbol);
-      if (!systemTradeEntities) return;
-      systemTradeEntities = systemTradeEntities
-        .filter(tradeEntity => tradeEntity.waypointSymbol !== waypointSymbol);
-      systemTradeEntities.push(...tradeEntities);
-      await this.cacheManager.set(
-        systemSymbol, systemTradeEntities,
-        {ttl: TRADE_PRICES_CACHE_TTL},
-      );
-    }
 
     return tradeEntities;
   }

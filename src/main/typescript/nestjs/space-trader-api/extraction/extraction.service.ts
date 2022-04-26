@@ -2,12 +2,10 @@ import {BaseService} from "../../BaseService";
 import {SurveyEntity} from "./survey.entity";
 import type { Cargo, ShipEntity } from "../ships/ship.entity";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
-import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
-import {Cache} from "cache-manager";
+import {Injectable} from "@nestjs/common";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {Cooldown} from "../types/Cooldown";
-import {getTimeRemaining} from "@commons/dateUtils";
 
 export interface SurveyResponse {
   cooldown: Cooldown;
@@ -27,46 +25,41 @@ export interface ExtractResponse {
 export class ExtractionService extends BaseService<SurveyEntity> {
   public constructor(
     httpClient: SpaceTraderHttpService,
-    @Inject(CACHE_MANAGER) cacheManager: Cache,
     @InjectRepository(SurveyEntity) repository: Repository<SurveyEntity>,
   ) {
-    super(httpClient, cacheManager, repository);
+    super(httpClient, repository);
   }
 
   public async survey(ship: ShipEntity): Promise<Array<SurveyEntity>> {
     if (ship.canSurvey()) {
       await this.repository.delete({});
-      await this.cacheManager.del(ship.location);
+    } else {
+      const existingSurveys = await this.repository.createQueryBuilder("surveys").select()
+        .where("surveys.location = :location", {location: ship.location}).getMany();
+      if (existingSurveys?.length) return existingSurveys;
+
+      return [];
     }
-    return this.getAllFromCacheOrFetch(
-      ship.location, "signature",
-      async () => {
-        if (!ship.canSurvey()) return [];
-        const resp = await this.httpClient.post<SurveyResponse>(`/my/ships/${ship.symbol}/survey`);
-        resp.surveys.forEach(survey => {
-          survey.location = ship.location;
-        });
-        ship.surveyCooldown = resp.cooldown;
-        return resp.surveys;
-      },
-      this.repository.createQueryBuilder("surveys").select()
-        .where("surveys.location = :location", {location: ship.location}),
-    );
+
+    const resp = await this.httpClient.post<SurveyResponse>(`/my/ships/${ship.symbol}/survey`);
+    resp.surveys.forEach(survey => {
+      survey.location = ship.location;
+    });
+    ship.surveyCooldown.setCooldown(resp.cooldown);
+
+    return Promise.all(resp.surveys.map(survey => this.loadEntityFromJson(survey)))
   }
   public async surveyCooldown(ship: ShipEntity): Promise<Cooldown> {
-    if (ship.surveyCooldown?.expiration && getTimeRemaining(ship.surveyCooldown.expiration) > 0) {
-      return ship.surveyCooldown;
+    if (!ship.canSurvey()) {
+      return ship.surveyCooldown.cooldown;
     }
 
     const resp = await this.httpClient.get<SurveyResponse>(`/my/ships/${ship.symbol}/survey`);
-    ship.surveyCooldown = resp.cooldown;
+    ship.surveyCooldown.setCooldown(resp.cooldown);
     return resp.cooldown;
   }
 
   public async getSurveys(location: string): Promise<Array<SurveyEntity>> {
-    const cachedSurveys = await this.cacheManager.get<Array<SurveyEntity>>(location);
-    if (cachedSurveys) return cachedSurveys;
-
     return this.repository.createQueryBuilder("surveys").select()
       .where("surveys.location = :location", {location})
       .getMany();
@@ -77,13 +70,13 @@ export class ExtractionService extends BaseService<SurveyEntity> {
       `/my/ships/${ship.symbol}/extract`,
       survey ? {survey: JSON.parse(JSON.stringify(survey))} : {},
     );
-    ship.extractCooldown = resp.cooldown;
+    ship.extractCooldown.setCooldown(resp.cooldown);
     return resp.extraction;
   }
   public async extractCooldown(ship: ShipEntity): Promise<Cooldown> {
     const resp = await this.httpClient.get<ExtractResponse>(
       `/my/ships/${ship.symbol}/extract`);
-    ship.extractCooldown = resp.cooldown;
+    ship.extractCooldown.setCooldown(resp.cooldown);
     return resp.cooldown;
   }
 

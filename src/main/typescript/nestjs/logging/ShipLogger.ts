@@ -8,7 +8,7 @@ export class ShipLogger extends AppLogger {
 
   public shipCargoLog(ship: ShipEntity, message: string) {
     this.logger.info(`Ship=${ship.symbol} ` +
-      `Cargo=${ship.cargo.map(cargo => `${cargo.tradeSymbol}:${cargo.units}`).join(" ")} ` +
+      `ShipCargo=${ship.cargo.map(cargo => `${cargo.tradeSymbol}:${cargo.units}`).join(" ")} ` +
       `${message}`);
   }
 }

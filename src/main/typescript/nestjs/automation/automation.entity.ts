@@ -25,6 +25,7 @@ export class AutomationEntity {
   }
   public nextTask(): void {
     this.taskIndex = (this.taskIndex + 1) % this.tasks.length;
+    this.target = "";
   }
 
   @Column("text", {nullable: true})

@@ -1,8 +1,7 @@
 import {BaseService} from "../../BaseService";
 import {WaypointEntity} from "./waypoint.entity";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
-import {CACHE_MANAGER, Inject, Injectable} from "@nestjs/common";
-import {Cache} from "cache-manager";
+import {Injectable} from "@nestjs/common";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {SystemService} from "./system.service";
@@ -12,15 +11,14 @@ import { WaypointType } from "@commons/GameConstants";
 export class WaypointService extends BaseService<WaypointEntity> {
   public constructor(
     httpClient: SpaceTraderHttpService,
-    @Inject(CACHE_MANAGER) cacheManager: Cache,
     @InjectRepository(WaypointEntity) repository: Repository<WaypointEntity>,
     private readonly systemService: SystemService,
   ) {
-    super(httpClient, cacheManager, repository);
+    super(httpClient, repository);
   }
 
   public async get(systemSymbol: string, waypointSymbol: string): Promise<WaypointEntity> {
-    return this.getFromCacheOrFetch(
+    return this.getFromDBOrFetch(
       waypointSymbol,
       () => this.httpClient.get<WaypointEntity>(
         `/systems/${systemSymbol}/waypoints/${waypointSymbol}`),
@@ -36,9 +34,7 @@ export class WaypointService extends BaseService<WaypointEntity> {
   }
 
   public async getAll(systemSymbol: string): Promise<WaypointEntity[]> {
-    return this.getAllFromCacheOrFetch(
-      systemSymbol,
-      "symbol",
+    return this.getAllFromDBOrFetch(
       () => this.httpClient.get<Array<WaypointEntity>>(
         `/systems/${systemSymbol}/waypoints`),
       this.repository.createQueryBuilder("waypoints")

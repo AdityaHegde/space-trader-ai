@@ -5,9 +5,12 @@ import { ShipNavigationService } from "@space-trader-api/ships/ship-navigation.s
 import { ShipStatus } from "@commons/GameConstants";
 import { parseLocation } from "@commons/parseLocation";
 import { Injectable } from "@nestjs/common";
+import { ShipLogger } from "@nestjs-server/logging/ShipLogger";
 
 @Injectable()
 export class TravelTask extends Task {
+  private readonly logger = new ShipLogger("TravelTask");
+
   constructor(
     private readonly shipNavigationService: ShipNavigationService,
   ) {
@@ -20,6 +23,7 @@ export class TravelTask extends Task {
 
   public isDone(ship: ShipEntity, automation: AutomationEntity): boolean {
     if (ship.location === automation.travelPath[0]) {
+      this.logger.shipLog(ship, `Navigated to Destination=${automation.travelPath[0]}`);
       automation.travelPath.shift();
     }
     return automation.travelPath.length === 0;
@@ -51,14 +55,9 @@ export class TravelTask extends Task {
   }
 
   public async doTask(ship: ShipEntity, automation: AutomationEntity): Promise<void> {
+    this.logger.shipLog(ship, `Navigating to Destination=${automation.travelPath[0]}`);
     ship.navigation = (await this.shipNavigationService
       .navigate(ship.symbol, automation.travelPath[0])).navigation;
     ship.navigation.departedAt = new Date().toString();
-  }
-
-  public async end(ship: ShipEntity): Promise<void> {
-    if (ship.status !== ShipStatus.DOCKED) {
-      await this.shipNavigationService.dockShip(ship.symbol);
-    }
   }
 }
