@@ -1,31 +1,26 @@
-import { ShipAutomationService } from "@nestjs-server/automation/ship-automation.service";
-import { ShipService } from "@space-trader-api/ships/ship.service";
-import { asyncWait } from "@commons/asyncWait";
-import { AUTOMATION_INTERVAL } from "@commons/constants";
 import { Injectable } from "@nestjs/common";
+import { ShipService } from "@space-trader-api/ships/ship.service";
+import { ShipAutomationClient } from "@nestjs-server/automation/ship-automation/client/ShipAutomationClient";
+import { AutomationTask } from "@nestjs-server/automation/ship-automation/client/automation.entity";
+import { getCurrentTime } from "@commons/dateUtils";
 
 @Injectable()
 export class AutomationService {
-  private continueAutomation: boolean;
-
   public constructor(
-    private readonly shipAutomationService: ShipAutomationService,
     private readonly shipService: ShipService,
+    private readonly shipAutomationClient: ShipAutomationClient,
   ) {}
 
-  public async runAutomation(): Promise<void> {
-    this.continueAutomation = true;
-
+  public async initShips(): Promise<void> {
     const ships = await this.shipService.updateAllShips();
-
-    while (this.continueAutomation) {
-      await this.shipAutomationService.automateShips(ships);
-
-      await asyncWait(AUTOMATION_INTERVAL);
+    for (const ship of ships) {
+      if (ship.symbol === "ADITYA-2") continue;
+      const automationEntity = await this.shipAutomationClient.getOrCreate(ship.symbol);
+      if (!automationEntity.task) {
+        automationEntity.task = AutomationTask.Schedule;
+        automationEntity.runAfter = getCurrentTime();
+      }
+      await this.shipAutomationClient.schedule(automationEntity);
     }
-  }
-
-  public stopAutomation() {
-    this.continueAutomation = false;
   }
 }

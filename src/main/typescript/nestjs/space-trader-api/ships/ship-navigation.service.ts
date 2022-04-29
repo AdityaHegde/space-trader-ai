@@ -1,7 +1,7 @@
 import {BaseService} from "../../BaseService";
 import {ShipEntity} from "./ship.entity";
-import {NavigateResponse, Navigation} from "../types/Navigation";
-import {Cooldown, JumpResponse} from "../types/Cooldown";
+import {NavigateResponse} from "../types/Navigation";
+import {JumpResponse} from "../types/Cooldown";
 import {Injectable} from "@nestjs/common";
 import {SpaceTraderHttpService} from "../space-trader-client/space-trader-http.service";
 import {InjectRepository} from "@nestjs/typeorm";

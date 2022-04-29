@@ -23,8 +23,9 @@ export abstract class BaseService<Entity extends BaseEntity> {
   protected async getAllFromDBOrFetch(
     remoteFetcher?: () => Promise<Array<Entity>>,
     repositoryQuery?: SelectQueryBuilder<Entity>,
+    forceLoad = false,
   ): Promise<Array<Entity>> {
-    if (repositoryQuery) {
+    if (!forceLoad && repositoryQuery) {
       const savedEntities = await repositoryQuery.getMany();
       if (savedEntities?.length) return savedEntities;
     }

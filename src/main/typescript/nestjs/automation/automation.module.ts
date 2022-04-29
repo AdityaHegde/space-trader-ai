@@ -1,34 +1,30 @@
-import { CacheModule, Module } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { AutomationEntity } from "@nestjs-server/automation/automation.entity";
-import { TravelTask } from "@nestjs-server/automation/task/TravelTask";
-import { ExtractTask } from "@nestjs-server/automation/task/ExtractTask";
-import { SellTask } from "@nestjs-server/automation/task/SellTask";
-import { ShipAutomationService } from "@nestjs-server/automation/ship-automation.service";
-import { ShipModule } from "@space-trader-api/ships/ship.module";
-import { ExtractionModule } from "@space-trader-api/extraction/extraction.module";
-import { TradeModule } from "@space-trader-api/trade/trade.module";
-import { SystemModule } from "@space-trader-api/systems/system.module";
+import { Module } from "@nestjs/common";
+import {
+  ShipAutomationSchedulerModule
+} from "@nestjs-server/automation/ship-automation/scheduler/ship-automation-scheduler.module";
+import {
+  ExtractionAutomationModule
+} from "@nestjs-server/automation/ship-automation/extraction/extraction-automation.module";
+import {
+  NavigationAutomationModule
+} from "@nestjs-server/automation/ship-automation/navigation/navigation-automation.module";
+import { SellAutomationModule } from "@nestjs-server/automation/ship-automation/sell/sell-automation.module";
 import { AutomationService } from "@nestjs-server/automation/automation.service";
+import { ShipModule } from "@space-trader-api/ships/ship.module";
+import {
+  ShipAutomationClientModule
+} from "@nestjs-server/automation/ship-automation/client/ship-automation-client.module";
 
 @Module({
   imports: [
-    CacheModule.register(),
-    TypeOrmModule.forFeature([AutomationEntity]),
+    ShipAutomationSchedulerModule,
+    ExtractionAutomationModule,
+    NavigationAutomationModule,
+    SellAutomationModule,
     ShipModule,
-    ExtractionModule,
-    TradeModule,
-    SystemModule,
+    ShipAutomationClientModule,
   ],
-  providers: [
-    TravelTask, ExtractTask, SellTask,
-    AutomationService,
-    ShipAutomationService,
-  ],
-  exports: [
-    TypeOrmModule,
-    AutomationService,
-    ShipAutomationService,
-  ],
+  providers: [AutomationService],
+  exports: [AutomationService],
 })
 export class AutomationModule {}

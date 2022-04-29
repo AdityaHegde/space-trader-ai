@@ -4,7 +4,12 @@ import {Injectable} from "@nestjs/common";
 import {SpaceTraderConfig} from "../../config/SpaceTraderConfig";
 import { HttpLogger } from "@nestjs-server/logging/HttpLogger";
 
-type AxiosCall = (page?: number) => Promise<AxiosResponse>;
+export interface AxiosCall {
+  url: string;
+  method: ("GET" | "POST");
+  data?: any;
+  page?: number;
+}
 export interface SpaceTradersResponse<Rec> {
   data: Rec;
   meta?: {
@@ -31,34 +36,30 @@ export class SpaceTraderHttpService {
   }
 
   public async get<Rec>(url: string): Promise<Rec> {
-    return this.sendPaginatedRequest<Rec>((page?: number) => {
-      const fullUrl = this.getFullUrl(url, page);
-      this.logger.httpRequest("GET", fullUrl);
-      return axios.get(fullUrl, { headers: this.getHeaders() });
+    return this.sendPaginatedRequest<Rec>({
+      url, method: "GET",
     });
   }
 
   public async post<Rec>(url: string, data: Record<string, any> = {}): Promise<Rec> {
-    const resp = await this.sendRequest<Rec>(() => {
-      const fullUrl = this.getFullUrl(url);
-      this.logger.httpRequest("POST", fullUrl, data);
-      return axios.post(fullUrl, data, { headers: this.getHeaders() });
+    const resp = await this.sendRequest<Rec>({
+      url, method: "POST", data,
     });
+
     return resp.data;
   }
 
   private async sendPaginatedRequest<Rec>(axiosCall: AxiosCall): Promise<Rec> {
     const respArrayJson = new Array<Rec>();
     let isDone = false;
-    let page;
 
     while (!isDone) {
-      const respJson = await this.sendRequest<Rec>(axiosCall, page);
+      const respJson = await this.sendRequest<Rec>(axiosCall);
       if (!respJson.meta) return respJson.data;
       if (respJson.meta.page * respJson.meta.limit >= respJson.meta.total) {
         isDone = true;
       } else {
-        page = respJson.meta.page + 1;
+        axiosCall.page = respJson.meta.page + 1;
       }
       respArrayJson.push(...(respJson.data as any));
     }
@@ -66,16 +67,10 @@ export class SpaceTraderHttpService {
     return respArrayJson as any;
   }
 
-  private async sendRequest<Rec>(axiosCall: AxiosCall, page?: number): Promise<SpaceTradersResponse<Rec>> {
+  private async sendRequest<Rec>(axiosCall: AxiosCall): Promise<SpaceTradersResponse<Rec>> {
     await this.rateLimiter.limit();
+    const resp = await this.makeAxiosCall(axiosCall);
 
-    let resp: AxiosResponse;
-    try {
-      resp = await axiosCall(page);
-    } catch (err) {
-      resp = err.response;
-    }
-    this.logger.httpResponse(resp);
     if (resp.status === 429) {
       this.rateLimiter.setRetryAfter(Number(resp.headers["retry-after"] ?? "5") * 1000);
       return this.sendRequest(axiosCall);
@@ -85,6 +80,23 @@ export class SpaceTraderHttpService {
     }
 
     return resp.data;
+  }
+
+  private async makeAxiosCall(axiosCall: AxiosCall): Promise<AxiosResponse> {
+    let resp: AxiosResponse;
+    try {
+      this.logger.httpRequest(axiosCall);
+      resp = await axios({
+        url: this.getFullUrl(axiosCall.url, axiosCall.page),
+        method: axiosCall.method,
+        ...axiosCall.data ? {data: axiosCall.data} : {},
+        headers: this.getHeaders(),
+      });
+    } catch (err) {
+      resp = err.response;
+    }
+    this.logger.httpResponse(axiosCall, resp);
+    return resp;
   }
 
   private getFullUrl(url: string, page?: number) {

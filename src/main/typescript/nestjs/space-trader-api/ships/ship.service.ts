@@ -24,6 +24,13 @@ export class ShipService extends BaseService<ShipEntity> {
       () => this.httpClient.get(`/my/ships/${shipSymbol}`),
     );
   }
+  public async forceGet(shipSymbol: string): Promise<ShipEntity> {
+    return this.getFromDBOrFetch(
+      shipSymbol,
+      () => this.httpClient.get(`/my/ships/${shipSymbol}`),
+      true,
+    );
+  }
 
   public async update(shipSymbol: string): Promise<ShipEntity> {
     return this.updateFromRemote(
@@ -49,12 +56,6 @@ export class ShipService extends BaseService<ShipEntity> {
     const shipEntities = new Array<ShipEntity>();
     for (const ship of ships) {
       const newShip = await this.fromJson(ship);
-      await this.extractionService.surveyCooldown(newShip);
-      await this.extractionService.extractCooldown(newShip);
-      newShip.navigation =
-        (await this.shipNavigationService.navigationStatus(newShip.symbol)).navigation;
-      newShip.jumpCooldown.setCooldown(
-        (await this.shipNavigationService.jumpCooldown(newShip.symbol)).cooldown);
       shipEntities.push(newShip);
       await this.repository.save(newShip);
     }

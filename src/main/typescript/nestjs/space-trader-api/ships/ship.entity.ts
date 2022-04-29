@@ -67,19 +67,6 @@ export class ShipEntity {
   public canExtract(): boolean {
     return this.extractCooldown.finishedCooldown();
   }
-  public hasNavigated(): boolean {
-    if (this.navigation) {
-      if (hasTimeElapsed(this.navigation.departedAt, this.navigation.durationRemaining)) {
-        this.navigation = undefined;
-        return true;
-      }
-      return false;
-    }
-    return true;
-  }
-  public canJump(): boolean {
-    return this.jumpCooldown.finishedCooldown();
-  }
 
   public isCargoFull(): boolean {
     return this.shipCargo.isFull();

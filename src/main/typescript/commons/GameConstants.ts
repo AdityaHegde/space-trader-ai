@@ -20,4 +20,5 @@ export enum ShipType {
 export enum ShipStatus {
   ORBIT = "ORBIT",
   DOCKED = "DOCKED",
+  IN_TRANSIT = "IN_TRANSIT",
 }

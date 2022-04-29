@@ -3,17 +3,13 @@ import {Column, Entity, PrimaryColumn} from "typeorm";
 @Entity()
 export class SurveyEntity {
   @PrimaryColumn()
-  signature: string;
+  public signature: string;
   @Column()
-  location: string;
+  public location: string;
   @Column("text", {array: true})
-  deposits: Array<string>;
-  @Column()
-  expiration: string;
-
-  public getAverageValue(values: Record<string, number>) {
-    return this.deposits.reduce(
-      (sum, deposit) => sum + (values[deposit] ?? 0), 0
-    ) / this.deposits.length;
-  }
+  public deposits: Array<string>;
+  @Column("float8")
+  public price: number;
+  @Column("timestamptz")
+  public expiration: string;
 }

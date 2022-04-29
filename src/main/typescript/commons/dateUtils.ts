@@ -11,3 +11,7 @@ export function hasExpired(timestamp: string): boolean {
 export function hasTimeElapsed(timestamp: string, durationInSec: number): boolean {
   return durationInSec === 0 || getTimeElapsed(timestamp) >= durationInSec * 1000;
 }
+
+export function getCurrentTime(): string {
+  return new Date().toISOString();
+}

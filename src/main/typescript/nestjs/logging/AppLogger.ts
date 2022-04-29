@@ -1,5 +1,6 @@
 import { ConsoleLogger } from "@nestjs/common";
 import { createLogger, format, Logger as WinstonLogger, transports } from "winston";
+import { LOG_LEVEL } from "@commons/constants";
 
 const { combine, label, printf, timestamp } = format;
 const TimestampLabelFormat = printf(({ level, message, label, timestamp }) => {
@@ -12,7 +13,7 @@ export class AppLogger extends ConsoleLogger {
   constructor(loggerLabel?: string, logger?: WinstonLogger) {
     super();
     this.logger = logger ?? createLogger({
-      level: "debug",
+      level: LOG_LEVEL,
       format: combine(
         label({ label: loggerLabel ?? "Nest" }),
         timestamp(),
